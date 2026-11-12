@@ -1,4 +1,4 @@
-# CKTracker — Production Modular Kitchen Business Management System
+# CKTracker — Production  Kitchen Business Management System
 
 CKTracker is a comprehensive, production-grade business management SaaS application designed specifically for modular kitchen manufacturers, studios, and interior turnkey businesses. It tracks the complete customer lifecycle across **14 distinct engineering, design, manufacturing, and installation stages** with role-based dashboards for **Admin**, **Manager**, and **Customer**.
 
