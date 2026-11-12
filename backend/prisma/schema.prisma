@@ -1,0 +1,800 @@
+// Prisma schema for CKTracker Modular Kitchen Business Management System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// -----------------------------------------------------------------------------
+// ENUMS
+// -----------------------------------------------------------------------------
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  CUSTOMER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum Department {
+  MANAGEMENT
+  SALES
+  DESIGN
+  MEASUREMENT
+  PROCUREMENT
+  MANUFACTURING
+  QUALITY_CONTROL
+  INSTALLATION
+  CUSTOMER_SUPPORT
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  INTERESTED
+  SITE_VISIT_SCHEDULED
+  QUOTATION_SENT
+  CONVERTED
+  LOST
+}
+
+enum AppointmentType {
+  SHOWROOM_CONSULTATION
+  SITE_MEASUREMENT
+  DESIGN_PRESENTATION
+  FINAL_INSPECTION
+  HANDOVER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  RESCHEDULED
+  CANCELLED
+}
+
+enum ProjectStatus {
+  PLANNING
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum StageStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  ON_HOLD
+  DELAYED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DELAYED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum DesignStatus {
+  DRAFT
+  UNDER_REVIEW
+  APPROVED
+  CHANGES_REQUESTED
+  SUPERSEDED
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  APPROVED
+  REVISED
+  REJECTED
+  EXPIRED
+}
+
+enum ProductCategory {
+  BASE_CABINETS
+  WALL_CABINETS
+  TALL_UNITS
+  COUNTERTOPS
+  LAMINATES
+  ACRYLIC_FINISHES
+  HINGES
+  DRAWER_CHANNELS
+  HANDLES
+  KITCHEN_ACCESSORIES
+  INSTALLATION_SERVICES
+  MISCELLANEOUS
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CASH
+  CHEQUE
+  BANK_TRANSFER
+  UPI
+  CREDIT_CARD
+  DEBIT_CARD
+  ONLINE_GATEWAY
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  PARTIALLY_PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum StockMovementType {
+  PURCHASED
+  ALLOCATED_TO_PROJECT
+  CONSUMED
+  DAMAGED_SCRAP
+  RETURNED_TO_SUPPLIER
+  INVENTORY_ADJUSTMENT
+}
+
+enum PurchaseOrderStatus {
+  DRAFT
+  ORDERED
+  PARTIALLY_RECEIVED
+  RECEIVED
+  CANCELLED
+}
+
+enum SupportTicketStatus {
+  OPEN
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// -----------------------------------------------------------------------------
+// CORE AUTHENTICATION & USERS
+// -----------------------------------------------------------------------------
+
+model User {
+  id                   String       @id @default(uuid())
+  email                String       @unique
+  passwordHash         String
+  role                 UserRole     @default(CUSTOMER)
+  status               UserStatus   @default(ACTIVE)
+  fullName             String
+  phoneNumber          String?
+  avatarUrl            String?
+  resetToken           String?
+  resetTokenExpiry     DateTime?
+  lastLoginAt          DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  // Relationships
+  customerProfile      Customer?
+  employeeProfile      Employee?
+  notifications        Notification[]
+  activityLogs         ActivityLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Customer {
+  id                   String       @id @default(uuid())
+  userId               String       @unique
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address              String?
+  city                 String?
+  pincode              String?
+  propertyType         String?      // e.g., Apartment, Villa, Independent House
+  kitchenDimensions   String?      // e.g., "12ft x 10ft L-shaped"
+  estimatedBudget      Decimal?     @db.Decimal(12, 2)
+  preferredStyle       String?      // e.g., Modern, Contemporary, Traditional, Industrial
+  preferredMaterials   String?      // e.g., Acrylic, Marine Ply, Quartz
+  leadSource           String?      // e.g., Website, Walk-in, Referral, Social Media
+  requirementsNotes    String?      @db.Text
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  // Relationships
+  leads                Lead[]
+  interactions         CustomerInteraction[]
+  appointments         Appointment[]
+  projects             Project[]
+  supportTickets       SupportTicket[]
+  warranties           Warranty[]
+
+  @@index([userId])
+}
+
+model Employee {
+  id                   String       @id @default(uuid())
+  userId               String       @unique
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeCode         String       @unique // e.g., EMP-001
+  department           Department   @default(SALES)
+  designation          String?      // e.g., Senior Modular Kitchen Designer
+  joiningDate          DateTime?
+  emergencyContact     String?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  // Relationships
+  managedLeads         Lead[]       @relation("AssignedManagerLeads")
+  managedProjects      Project[]    @relation("AssignedManagerProjects")
+  assignedStages       ProjectStage[] @relation("AssignedStageEmployee")
+  assignedTasks        Task[]       @relation("AssignedTasks")
+  createdTasks         Task[]       @relation("CreatedTasks")
+  conductedAppointments Appointment[]
+  assignedTickets      SupportTicket[] @relation("AssignedTechnicianTickets")
+
+  @@index([userId])
+  @@index([department])
+}
+
+// -----------------------------------------------------------------------------
+// CRM & LEAD MANAGEMENT
+// -----------------------------------------------------------------------------
+
+model Lead {
+  id                   String       @id @default(uuid())
+  leadCode             String       @unique // e.g., LD-2026-001
+  customerId           String?
+  customer             Customer?    @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  contactName          String
+  contactEmail         String?
+  contactPhone         String
+  propertyAddress      String?
+  status               LeadStatus   @default(NEW)
+  estimatedBudget      Decimal?     @db.Decimal(12, 2)
+  preferredStyle       String?
+  notes                String?      @db.Text
+  assignedManagerId    String?
+  assignedManager      Employee?    @relation("AssignedManagerLeads", fields: [assignedManagerId], references: [id], onDelete: SetNull)
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  interactions         CustomerInteraction[]
+  appointments         Appointment[]
+
+  @@index([status])
+  @@index([assignedManagerId])
+}
+
+model CustomerInteraction {
+  id                   String       @id @default(uuid())
+  customerId           String?
+  customer             Customer?    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  leadId               String?
+  lead                 Lead?        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  interactionType      String       // Call, WhatsApp, Email, Showroom Visit, Site Visit
+  summary              String       @db.Text
+  nextFollowUpDate     DateTime?
+  recordedByUserId     String
+  createdAt            DateTime     @default(now())
+
+  @@index([customerId])
+  @@index([leadId])
+}
+
+model Appointment {
+  id                   String            @id @default(uuid())
+  title                String
+  type                 AppointmentType   @default(SITE_MEASUREMENT)
+  status               AppointmentStatus @default(SCHEDULED)
+  scheduledDate        DateTime
+  location             String?
+  notes                String?           @db.Text
+  customerId           String?
+  customer             Customer?         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  leadId               String?
+  lead                 Lead?             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  assignedEmployeeId   String?
+  assignedEmployee     Employee?         @relation(fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@index([scheduledDate])
+  @@index([customerId])
+}
+
+// -----------------------------------------------------------------------------
+// PROJECT MANAGEMENT & 14-STAGE LIFECYCLE
+// -----------------------------------------------------------------------------
+
+model Project {
+  id                   String         @id @default(uuid())
+  projectCode          String         @unique // e.g., CK-2026-101
+  title                String
+  kitchenType          String?        // L-Shaped, U-Shaped, Island, Parallel, Straight
+  budget               Decimal        @db.Decimal(12, 2)
+  contractAmount       Decimal?       @db.Decimal(12, 2)
+  startDate            DateTime?
+  expectedCompletion   DateTime?
+  actualCompletion     DateTime?
+  currentStageNumber   Int            @default(1)
+  status               ProjectStatus  @default(PLANNING)
+  notes                String?        @db.Text
+  
+  customerId           String
+  customer             Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  assignedManagerId    String?
+  assignedManager      Employee?      @relation("AssignedManagerProjects", fields: [assignedManagerId], references: [id], onDelete: SetNull)
+  
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  // Relationships
+  stages               ProjectStage[]
+  tasks                Task[]
+  designs              Design[]
+  quotations           Quotation[]
+  payments             Payment[]
+  invoices             Invoice[]
+  stockMovements       StockMovement[]
+  fileAttachments      FileAttachment[]
+  warranties           Warranty[]
+  supportTickets       SupportTicket[]
+
+  @@index([projectCode])
+  @@index([customerId])
+  @@index([status])
+  @@index([assignedManagerId])
+}
+
+model ProjectStage {
+  id                   String         @id @default(uuid())
+  projectId            String
+  project              Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  stageNumber          Int            // 1 to 14
+  name                 String         // E.g., Customer Registration, Site Measurement, etc.
+  description          String?        @db.Text
+  status               StageStatus    @default(PENDING)
+  expectedDurationDays Int            @default(7)
+  startDate            DateTime?
+  completionDate       DateTime?
+  delayReason          String?        @db.Text
+  remarks              String?        @db.Text
+  assignedEmployeeId   String?
+  assignedEmployee     Employee?      @relation("AssignedStageEmployee", fields: [assignedEmployeeId], references: [id], onDelete: SetNull)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  // Relationships
+  history              StageHistory[]
+  tasks                Task[]
+  fileAttachments      FileAttachment[]
+
+  @@unique([projectId, stageNumber])
+  @@index([projectId])
+  @@index([status])
+}
+
+model StageHistory {
+  id                   String         @id @default(uuid())
+  projectStageId       String
+  projectStage         ProjectStage   @relation(fields: [projectStageId], references: [id], onDelete: Cascade)
+  fromStatus           StageStatus
+  toStatus             StageStatus
+  changeReason         String?        @db.Text
+  changedByUserId      String
+  createdAt            DateTime       @default(now())
+
+  @@index([projectStageId])
+}
+
+model Task {
+  id                   String         @id @default(uuid())
+  title                String
+  description          String?        @db.Text
+  status               TaskStatus     @default(PENDING)
+  priority             TaskPriority   @default(MEDIUM)
+  dueDate              DateTime?
+  completedAt          DateTime?
+  
+  projectId            String
+  project              Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectStageId       String?
+  projectStage         ProjectStage?  @relation(fields: [projectStageId], references: [id], onDelete: SetNull)
+  
+  assignedToId         String?
+  assignedTo           Employee?      @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdById          String?
+  createdBy            Employee?      @relation("CreatedTasks", fields: [createdById], references: [id], onDelete: SetNull)
+
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  @@index([projectId])
+  @@index([assignedToId])
+}
+
+// -----------------------------------------------------------------------------
+// KITCHEN DESIGN MANAGEMENT
+// -----------------------------------------------------------------------------
+
+model Design {
+  id                   String         @id @default(uuid())
+  projectId            String
+  project              Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versionNumber        Int            @default(1) // 1, 2, 3...
+  title                String         // e.g., "Initial 3D Render - Matte Black & Warm Oak"
+  description          String?        @db.Text
+  materialsDescription String?        @db.Text
+  finishes             String?        // e.g., "Gloss Acrylic upper, Soft-touch laminate lower"
+  status               DesignStatus   @default(UNDER_REVIEW)
+  layout2DUrl          String?
+  render3DUrl          String?
+  cadFileUrl           String?
+  uploadedByUserId     String
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  // Relationships
+  approvals            DesignApproval[]
+  fileAttachments      FileAttachment[]
+
+  @@unique([projectId, versionNumber])
+  @@index([projectId])
+}
+
+model DesignApproval {
+  id                   String         @id @default(uuid())
+  designId             String
+  design               Design         @relation(fields: [designId], references: [id], onDelete: Cascade)
+  decision             DesignStatus   // APPROVED or CHANGES_REQUESTED
+  customerComments     String?        @db.Text
+  decidedAt            DateTime       @default(now())
+  ipAddress            String?
+
+  @@index([designId])
+}
+
+// -----------------------------------------------------------------------------
+// QUOTATION & INVOICING ENGINE
+// -----------------------------------------------------------------------------
+
+model Quotation {
+  id                   String             @id @default(uuid())
+  quotationNumber      String             @unique // e.g., QT-2026-001-V1
+  projectId            String
+  project              Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  versionNumber        Int                @default(1)
+  quotationDate        DateTime           @default(now())
+  expiryDate           DateTime
+  status               QuotationStatus    @default(DRAFT)
+  subtotal             Decimal            @db.Decimal(12, 2) @default(0)
+  discountPercentage   Decimal            @db.Decimal(5, 2)  @default(0)
+  discountAmount       Decimal            @db.Decimal(12, 2) @default(0)
+  gstPercentage        Decimal            @db.Decimal(5, 2)  @default(18.0)
+  gstAmount            Decimal            @db.Decimal(12, 2) @default(0)
+  installationCharges  Decimal            @db.Decimal(12, 2) @default(0)
+  transportCharges     Decimal            @db.Decimal(12, 2) @default(0)
+  additionalCharges    Decimal            @db.Decimal(12, 2) @default(0)
+  grandTotal           Decimal            @db.Decimal(12, 2) @default(0)
+  termsAndConditions   String?            @db.Text
+  pdfUrl               String?
+  isFrozen             Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  // Relationships
+  items                QuotationItem[]
+  approvals            QuotationApproval[]
+  invoices             Invoice[]
+
+  @@index([projectId])
+  @@index([quotationNumber])
+}
+
+model QuotationItem {
+  id                   String             @id @default(uuid())
+  quotationId          String
+  quotation            Quotation          @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  category             ProductCategory
+  description          String
+  dimensions           String?            // e.g., "900mm x 600mm x 720mm"
+  materialFinish       String?            // e.g., "BWP Plywood with 1mm Laminate"
+  quantity             Int                @default(1)
+  unitPrice            Decimal            @db.Decimal(12, 2)
+  discount             Decimal            @db.Decimal(12, 2) @default(0)
+  totalPrice           Decimal            @db.Decimal(12, 2)
+  createdAt            DateTime           @default(now())
+
+  @@index([quotationId])
+}
+
+model QuotationApproval {
+  id                   String             @id @default(uuid())
+  quotationId          String
+  quotation            Quotation          @relation(fields: [quotationId], references: [id], onDelete: Cascade)
+  decision             QuotationStatus    // APPROVED or REJECTED
+  customerComments     String?            @db.Text
+  decidedAt            DateTime           @default(now())
+  ipAddress            String?
+
+  @@index([quotationId])
+}
+
+// -----------------------------------------------------------------------------
+// PAYMENTS & INVOICES
+// -----------------------------------------------------------------------------
+
+model Payment {
+  id                   String             @id @default(uuid())
+  receiptNumber        String             @unique // e.g., RCPT-2026-001
+  projectId            String
+  project              Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  invoiceId            String?
+  invoice              Invoice?           @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  amount               Decimal            @db.Decimal(12, 2)
+  paymentDate          DateTime           @default(now())
+  paymentMethod        PaymentMethod      @default(BANK_TRANSFER)
+  paymentStatus        PaymentStatus      @default(COMPLETED)
+  transactionReference String?            // UTR, Cheque No, Gateway TXN ID
+  milestoneTitle       String?            // e.g., "Advance Token", "50% Production Milestone"
+  notes                String?            @db.Text
+  receiptPdfUrl        String?
+  recordedByUserId     String
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([projectId])
+  @@index([receiptNumber])
+}
+
+model Invoice {
+  id                   String             @id @default(uuid())
+  invoiceNumber        String             @unique // e.g., INV-2026-001
+  projectId            String
+  project              Project            @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  quotationId          String?
+  quotation            Quotation?         @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  issueDate            DateTime           @default(now())
+  dueDate              DateTime
+  status               InvoiceStatus      @default(ISSUED)
+  totalAmount          Decimal            @db.Decimal(12, 2)
+  paidAmount           Decimal            @db.Decimal(12, 2) @default(0)
+  balanceDue           Decimal            @db.Decimal(12, 2)
+  pdfUrl               String?
+  notes                String?            @db.Text
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  payments             Payment[]
+
+  @@index([projectId])
+  @@index([invoiceNumber])
+}
+
+// -----------------------------------------------------------------------------
+// INVENTORY & SUPPLIER PROCUREMENT
+// -----------------------------------------------------------------------------
+
+model InventoryItem {
+  id                   String             @id @default(uuid())
+  itemCode             String             @unique // e.g., MAT-PLY-001
+  name                 String             // e.g., "Century Marine Plywood 18mm 8x4"
+  category             ProductCategory
+  unit                 String             // Sheets, SqFt, Meters, Pairs, Pieces
+  currentStock         Decimal            @db.Decimal(10, 2) @default(0)
+  minimumStockLevel    Decimal            @db.Decimal(10, 2) @default(10)
+  unitCost             Decimal            @db.Decimal(12, 2)
+  location             String?            // Warehouse rack/bin
+  description          String?            @db.Text
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  stockMovements       StockMovement[]
+  poItems              PurchaseOrderItem[]
+
+  @@index([itemCode])
+  @@index([category])
+}
+
+model StockMovement {
+  id                   String             @id @default(uuid())
+  inventoryItemId      String
+  inventoryItem        InventoryItem      @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  movementType         StockMovementType
+  quantity             Decimal            @db.Decimal(10, 2)
+  unitCost             Decimal?           @db.Decimal(12, 2)
+  projectId            String?
+  project              Project?           @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  referenceNote        String?            @db.Text
+  performedByUserId    String
+  createdAt            DateTime           @default(now())
+
+  @@index([inventoryItemId])
+  @@index([projectId])
+}
+
+model Supplier {
+  id                   String             @id @default(uuid())
+  supplierCode         String             @unique // e.g., SUP-001
+  companyName          String
+  contactPerson        String?
+  email                String?
+  phone                String
+  gstin                String?
+  address              String?            @db.Text
+  materialCategories   String?            // Plywood, Hardware, Laminates
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  purchaseOrders       PurchaseOrder[]
+
+  @@index([supplierCode])
+}
+
+model PurchaseOrder {
+  id                   String              @id @default(uuid())
+  poNumber             String              @unique // e.g., PO-2026-001
+  supplierId           String
+  supplier             Supplier            @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  orderDate            DateTime            @default(now())
+  expectedDeliveryDate DateTime?
+  status               PurchaseOrderStatus @default(ORDERED)
+  totalAmount          Decimal             @db.Decimal(12, 2) @default(0)
+  notes                String?             @db.Text
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  items                PurchaseOrderItem[]
+
+  @@index([supplierId])
+  @@index([poNumber])
+}
+
+model PurchaseOrderItem {
+  id                   String             @id @default(uuid())
+  purchaseOrderId      String
+  purchaseOrder        PurchaseOrder      @relation(fields: [purchaseOrderId], references: [id], onDelete: Cascade)
+  inventoryItemId      String
+  inventoryItem        InventoryItem      @relation(fields: [inventoryItemId], references: [id], onDelete: Restrict)
+  quantity             Decimal            @db.Decimal(10, 2)
+  unitPrice            Decimal            @db.Decimal(12, 2)
+  totalPrice           Decimal            @db.Decimal(12, 2)
+  receivedQuantity     Decimal            @db.Decimal(10, 2) @default(0)
+
+  @@index([purchaseOrderId])
+}
+
+// -----------------------------------------------------------------------------
+// POST-HANDOVER, WARRANTY & AFTER-SALES
+// -----------------------------------------------------------------------------
+
+model Warranty {
+  id                   String             @id @default(uuid())
+  warrantyCode         String             @unique // e.g., WAR-2026-001
+  projectId            String
+  project              Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  customerId           String
+  customer             Customer           @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  startDate            DateTime           @default(now())
+  durationYears        Int                @default(10) // e.g., 10-year warranty on hinges/carcass
+  coverageDetails      String             @db.Text
+  certificatePdfUrl    String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([projectId])
+  @@index([customerId])
+}
+
+model SupportTicket {
+  id                   String              @id @default(uuid())
+  ticketNumber         String              @unique // e.g., TKT-2026-001
+  customerId           String
+  customer             Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  projectId            String?
+  project              Project?            @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  category             String              // Hardware, Alignment, Laminate peel, Water seepage, General
+  priority             TicketPriority      @default(MEDIUM)
+  status               SupportTicketStatus @default(OPEN)
+  subject              String
+  description          String              @db.Text
+  assignedTechnicianId String?
+  assignedTechnician   Employee?           @relation("AssignedTechnicianTickets", fields: [assignedTechnicianId], references: [id], onDelete: SetNull)
+  scheduledVisitDate   DateTime?
+  resolutionNotes      String?             @db.Text
+  resolvedAt           DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+
+  fileAttachments      FileAttachment[]
+
+  @@index([customerId])
+  @@index([status])
+}
+
+// -----------------------------------------------------------------------------
+// SYSTEM UTILITIES: ATTACHMENTS, NOTIFICATIONS & AUDIT LOGS
+// -----------------------------------------------------------------------------
+
+model FileAttachment {
+  id                   String             @id @default(uuid())
+  originalName         String
+  fileUrl              String
+  fileType             String             // image/png, application/pdf, etc.
+  fileSize             Int                // Bytes
+  category             String             // MEASUREMENT_DOC, 2D_CAD, 3D_RENDER, PROGRESS_PHOTO, COMPLAINT_PHOTO
+  
+  projectId            String?
+  project              Project?           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectStageId       String?
+  projectStage         ProjectStage?      @relation(fields: [projectStageId], references: [id], onDelete: SetNull)
+  designId             String?
+  design               Design?            @relation(fields: [designId], references: [id], onDelete: SetNull)
+  supportTicketId      String?
+  supportTicket        SupportTicket?     @relation(fields: [supportTicketId], references: [id], onDelete: SetNull)
+
+  uploadedByUserId     String
+  createdAt            DateTime           @default(now())
+
+  @@index([projectId])
+  @@index([projectStageId])
+}
+
+model Notification {
+  id                   String             @id @default(uuid())
+  userId               String
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title                String
+  message              String             @db.Text
+  type                 String             // STAGE_UPDATE, DESIGN_APPROVAL, QUOTATION_RECEIVED, PAYMENT_RECEIVED, etc.
+  linkUrl              String?
+  isRead               Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+
+  @@index([userId])
+  @@index([isRead])
+}
+
+model ActivityLog {
+  id                   String             @id @default(uuid())
+  actorId              String?
+  actor                User?              @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action               String             // USER_LOGIN, STAGE_ADVANCED, QUOTATION_CREATED, PAYMENT_LOGGED, etc.
+  entityType           String             // PROJECT, QUOTATION, PAYMENT, DESIGN, CUSTOMER
+  entityId             String?
+  details              String?            @db.Text
+  ipAddress            String?
+  createdAt            DateTime           @default(now())
+
+  @@index([actorId])
+  @@index([entityType])
+  @@index([createdAt])
+}
