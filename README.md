@@ -63,6 +63,41 @@ CKTracker is a comprehensive, production-grade business management SaaS applicat
 | **Designer** | `designer.priya@cktracker.com` | `Designer@123` | 2D/3D kitchen layout uploads, material specs, customer modification requests. |
 | **Customer** | `customer.sharma@gmail.com` | `Customer@123` | Personal kitchen tracker (Stage 8/14), 3D render approval, quotation viewing, payment receipts. |
 | **Customer** | `customer.verma@gmail.com` | `Customer@123` | Personal kitchen tracker (Stage 3/14), Scandinavian parallel kitchen inquiry. |
+## Application Screenshots
+
+CKTracker provides three role-based portals designed to streamline modular kitchen business operations and improve coordination between administrators, managers, and customers.
+
+### 1. Admin Portal
+
+The Admin Portal provides centralized control over business operations, including customer management, project tracking, quotations, payments, inventory, and analytics.
+
+<img width="1917" height="897" alt="image" src="https://github.com/user-attachments/assets/0be3fd7d-034b-4e68-8315-d09597688358" />
+
+
+### 2. Manager Portal
+
+The Manager Portal helps managers handle assigned customers, leads, site visits, appointments, and kitchen project progress.
+
+<img width="1917" height="887" alt="image" src="https://github.com/user-attachments/assets/a1c3c2a6-ac40-455e-a517-b4509518d50e" />
+
+
+### 3. Customer Portal
+
+The Customer Portal allows customers to access their kitchen project information, monitor project progress, and view relevant designs, quotations, and payment details.
+
+<img width="1917" height="921" alt="image" src="https://github.com/user-attachments/assets/71cd8358-19cb-4954-934b-8cb6bdea59fe" />
+
+
+---
+
+## User Roles
+
+| Role | Responsibilities |
+|---|---|
+| Admin | Overall business and operational management |
+| Manager | Customer registration, lead management, appointments, and project coordination |
+| Customer | Project tracking and access to personal project information |
+
 
 ---
 
