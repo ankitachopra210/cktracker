@@ -1,0 +1,96 @@
+name: CI/CD Pipeline - CKTracker Modular Kitchen Management System
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  backend-test:
+    name: Backend Tests & Validation
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password123
+          POSTGRES_DB: cktracker_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:password123@localhost:5432/cktracker_test?schema=public
+        run: npx prisma generate
+
+      - name: Run Database Migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:password123@localhost:5432/cktracker_test?schema=public
+        run: npx prisma db push --skip-generate
+
+      - name: Seed Test Database
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://postgres:password123@localhost:5432/cktracker_test?schema=public
+        run: node prisma/seed.js
+
+      - name: Run Backend Integration & Unit Tests
+        working-directory: backend
+        env:
+          NODE_ENV: test
+          PORT: 5001
+          DATABASE_URL: postgresql://postgres:password123@localhost:5432/cktracker_test?schema=public
+          JWT_SECRET: supersecret_ci_cd_jwt_token_key_12345
+          JWT_EXPIRES_IN: 1d
+          CORS_ORIGIN: '*'
+        run: npm test
+
+  frontend-build:
+    name: Frontend Build & Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Build Frontend Application
+        working-directory: frontend
+        env:
+          VITE_API_URL: https://api.cktracker.example.com
+          VITE_SOCKET_URL: https://api.cktracker.example.com
+        run: npm run build

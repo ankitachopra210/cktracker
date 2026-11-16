@@ -14,6 +14,10 @@ const designRoutes = require('./routes/design.routes');
 const quotationRoutes = require('./routes/quotation.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const inventoryRoutes = require('./routes/inventory.routes');
+const employeeRoutes = require('./routes/employee.routes');
+const analyticsRoutes = require('./routes/analytics.routes');
+const supportRoutes = require('./routes/support.routes');
+const notificationRoutes = require('./routes/notification.routes');
 
 const app = express();
 
@@ -61,6 +65,10 @@ app.use('/api/designs', designRoutes);
 app.use('/api/quotations', quotationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/inventory', inventoryRoutes);
+app.use('/api/users', employeeRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/support', supportRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // 404 handler for unknown routes
 app.use((req, res, next) => {

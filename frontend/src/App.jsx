@@ -27,6 +27,11 @@ import QuotationBuilderPage from './pages/quotations/QuotationBuilderPage';
 import PaymentManagementPage from './pages/payments/PaymentManagementPage';
 import InventoryDashboardPage from './pages/inventory/InventoryDashboardPage';
 
+// Enterprise & Support Pages
+import StaffManagementPage from './pages/employees/StaffManagementPage';
+import AnalyticsDashboardPage from './pages/analytics/AnalyticsDashboardPage';
+import SupportWarrantyPage from './pages/support/SupportWarrantyPage';
+
 // Root redirector based on authenticated role
 const RootRedirect = () => {
   const { user, loading } = useAuth();
@@ -67,6 +72,9 @@ function App() {
               <Route path="quotations" element={<QuotationBuilderPage />} />
               <Route path="payments" element={<PaymentManagementPage />} />
               <Route path="inventory" element={<InventoryDashboardPage />} />
+              <Route path="employees" element={<StaffManagementPage />} />
+              <Route path="analytics" element={<AnalyticsDashboardPage />} />
+              <Route path="support" element={<SupportWarrantyPage />} />
               <Route path="*" element={<AdminDashboardPage />} />
             </Route>
 
@@ -90,6 +98,7 @@ function App() {
               <Route path="designs" element={<DesignManagementPage />} />
               <Route path="quotations" element={<QuotationBuilderPage />} />
               <Route path="inventory" element={<InventoryDashboardPage />} />
+              <Route path="support" element={<SupportWarrantyPage />} />
               <Route path="*" element={<ManagerDashboardPage />} />
             </Route>
 
@@ -107,6 +116,8 @@ function App() {
               <Route path="designs" element={<DesignManagementPage />} />
               <Route path="quotations" element={<QuotationBuilderPage />} />
               <Route path="payments" element={<PaymentManagementPage />} />
+              <Route path="warranty" element={<SupportWarrantyPage />} />
+              <Route path="support" element={<SupportWarrantyPage />} />
               <Route path="*" element={<CustomerDashboardPage />} />
             </Route>
 
