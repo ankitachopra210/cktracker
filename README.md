@@ -1,4 +1,4 @@
-# CKTracker — Production Modular Kitchen Business Management System
+# CKTracker — Production  Kitchen Business Management System
 
 [![CI/CD Pipeline](https://github.com/example/cktracker/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/example/cktracker/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -90,11 +90,11 @@ All accounts are pre-seeded in the database for immediate testing:
 
 | Role | Email | Password | Pre-loaded Context |
 | :--- | :--- | :--- | :--- |
-| **Admin** | `admin@cktracker.com` | `Admin@123` | Complete business oversight across all customer projects. |
-| **Manager** | `manager.rahul@cktracker.com` | `Manager@123` | Assigned to Sharma Island Kitchen project and leads. |
-| **Designer** | `designer.priya@cktracker.com` | `Designer@123` | Uploaded 2D/3D renders for Sharma & Verma projects. |
-| **Customer** | `customer.sharma@gmail.com` | `Customer@123` | Active Island Kitchen project (Stage 8/14 Manufacturing). |
-| **Customer** | `customer.verma@gmail.com` | `Customer@123` | Parallel Kitchen inquiry in Design stage (Stage 3/14). |
+| **Admin** | `admin@cktracker.com` | `Admin@123` | Complete business oversight: financial audits, employee admin, inventory, all projects, analytics. |
+| **Manager** | `manager.rahul@cktracker.com` | `Manager@123` | Customer CRM, leads, site measurements, assigned projects, stage progression, photo logs. |
+| **Designer** | `designer.priya@cktracker.com` | `Designer@123` | 2D/3D kitchen layout uploads, material specs, customer modification requests. |
+| **Customer** | `customer.sharma@gmail.com` | `Customer@123` | Personal kitchen tracker (Stage 8/14), 3D render approval, quotation viewing, payment receipts. |
+| **Customer** | `customer.verma@gmail.com` | `Customer@123` | Personal kitchen tracker (Stage 3/14), Scandinavian parallel kitchen inquiry. |
 
 ---
 
